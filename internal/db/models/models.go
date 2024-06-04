@@ -13,7 +13,7 @@ type User struct {
 
 type LoginPassword struct {
 	gorm.Model
-	UserID   uint   `json:"user_id" gorm:"not null"`
+	UserID   string `json:"user_id" gorm:"not null"`
 	Login    string `json:"username" gorm:"not null"`
 	Password string `json:"password" gorm:"not null"`
 	Metadata string `json:"metadata" gorm:"type:text"`

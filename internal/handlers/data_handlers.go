@@ -102,12 +102,205 @@ func (dh *DataHandler) GetCreditCardHandler() gin.HandlerFunc {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
+
 		ctx.IndentedJSON(
-			http.StatusCreated, gin.H{
-				"message": "User has been created",
+			http.StatusOK, gin.H{
+				"message": "Credit card list",
 				"body":    creditCard,
 			},
 		)
 
+	}
+}
+
+func (dh *DataHandler) AddBinaryDataHandler() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		userID, err := extractUserFromRequest(ctx)
+		if err != nil {
+			if errors.Is(err, errTokenNotFound) {
+				ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			} else {
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			}
+			log.Printf("Error extracting user from token: %v", err)
+			return
+		}
+
+		var binaryData models.BinaryData
+		if err := ctx.ShouldBindJSON(&binaryData); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		binaryData.UserID = userID
+		err = dh.bd.SaveNewBinaryData(&binaryData)
+		if err != nil {
+			log.Printf("Error adding binary data: %v", err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		ctx.IndentedJSON(
+			http.StatusCreated, gin.H{
+				"message": "Binary data have been added",
+				"status":  http.StatusCreated,
+			},
+		)
+	}
+}
+
+func (dh *DataHandler) GetBinaryDataHandler() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		userID, err := extractUserFromRequest(ctx)
+		if err != nil {
+			if errors.Is(err, errTokenNotFound) {
+				ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			} else {
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			}
+			log.Printf("Error extracting user from token: %v", err)
+			return
+		}
+
+		binaryData, err := dh.bd.GetBinaryData(userID)
+		if err != nil {
+			log.Printf("Error getting binary data: %v", err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		ctx.IndentedJSON(
+			http.StatusOK, gin.H{
+				"message": "Binary data list",
+				"body":    binaryData,
+			},
+		)
+	}
+}
+
+func (dh *DataHandler) AddTextDataHandler() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		userID, err := extractUserFromRequest(ctx)
+		if err != nil {
+			if errors.Is(err, errTokenNotFound) {
+				ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			} else {
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			}
+			log.Printf("Error extracting user from token: %v", err)
+			return
+		}
+
+		var textData models.TextData
+		if err := ctx.ShouldBindJSON(&textData); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		textData.UserID = userID
+		err = dh.td.SaveNewTextData(&textData)
+		if err != nil {
+			log.Printf("Error adding text data: %v", err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		ctx.IndentedJSON(
+			http.StatusCreated, gin.H{
+				"message": "Text data have been added",
+				"status":  http.StatusCreated,
+			},
+		)
+	}
+}
+
+func (dh *DataHandler) GetTextDataHandler() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		userID, err := extractUserFromRequest(ctx)
+		if err != nil {
+			if errors.Is(err, errTokenNotFound) {
+				ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			} else {
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			}
+			log.Printf("Error extracting user from token: %v", err)
+			return
+		}
+
+		textData, err := dh.td.GetTextData(userID)
+		if err != nil {
+			log.Printf("Error getting text data: %v", err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		ctx.IndentedJSON(
+			http.StatusOK, gin.H{
+				"message": "Text data list",
+				"body":    textData,
+			},
+		)
+	}
+}
+
+func (dh *DataHandler) AddLoginPasswordHandler() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		userID, err := extractUserFromRequest(ctx)
+		if err != nil {
+			if errors.Is(err, errTokenNotFound) {
+				ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			} else {
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			}
+			log.Printf("Error extracting user from token: %v", err)
+			return
+		}
+
+		var loginPassword models.LoginPassword
+		if err := ctx.ShouldBindJSON(&loginPassword); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		loginPassword.UserID = userID
+		err = dh.lp.SaveNewLoginPassword(&loginPassword)
+		if err != nil {
+			log.Printf("Error adding new login and password: %v", err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		ctx.IndentedJSON(
+			http.StatusCreated, gin.H{
+				"message": "Login-Password data have been added",
+				"status":  http.StatusCreated,
+			},
+		)
+	}
+}
+
+func (dh *DataHandler) GetLoginPasswordHandler() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		userID, err := extractUserFromRequest(ctx)
+		if err != nil {
+			if errors.Is(err, errTokenNotFound) {
+				ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			} else {
+				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			}
+			log.Printf("error extracting user from token: %v", err)
+			return
+		}
+
+		lpData, err := dh.lp.GetLoginPasswordData(userID)
+		if err != nil {
+			log.Printf("error getting login-password data: %v", err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		ctx.IndentedJSON(
+			http.StatusOK, gin.H{
+				"message": "Login-Password data list",
+				"body":    lpData,
+			},
+		)
 	}
 }

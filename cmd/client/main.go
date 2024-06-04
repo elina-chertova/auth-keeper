@@ -22,6 +22,15 @@ func main() {
 
 			cliApp.AddCardCommand(baseURLData),
 			cliApp.GetCardCommand(baseURLData),
+
+			cliApp.AddTextDataCommand(baseURLData),
+			cliApp.GetTextDataCommand(baseURLData),
+
+			cliApp.AddBinaryDataCommand(baseURLData),
+			cliApp.GetBinaryDataCommand(baseURLData),
+
+			cliApp.AddLoginPasswordCommand(baseURLData),
+			cliApp.GetLoginPasswordCommand(baseURLData),
 		},
 	}
 

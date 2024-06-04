@@ -109,7 +109,7 @@ func GetCard(baseURL string) func(c *cli.Context) error {
 			log.Fatalf("Error getting credit card: %v", err)
 		}
 
-		if resp.StatusCode != http.StatusCreated {
+		if resp.StatusCode != http.StatusOK {
 			log.Fatalf(
 				"Failed to get credit card, status code: %d, response: %s",
 				resp.StatusCode,

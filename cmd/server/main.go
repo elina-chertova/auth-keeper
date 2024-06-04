@@ -49,6 +49,14 @@ func dataRoutes(r *gin.Engine, db *gorm.DB) {
 	authorized.POST("/api/data/add-card", h.AddCreditCardHandler())
 	authorized.GET("/api/data/get-card", h.GetCreditCardHandler())
 
+	authorized.POST("/api/data/add-text-data", h.AddTextDataHandler())
+	authorized.GET("/api/data/get-text-data", h.GetTextDataHandler())
+
+	authorized.POST("/api/data/add-binary-data", h.AddBinaryDataHandler())
+	authorized.GET("/api/data/get-binary-data", h.GetBinaryDataHandler())
+
+	authorized.POST("/api/data/add-login-password", h.AddLoginPasswordHandler())
+	authorized.GET("/api/data/get-login-password", h.GetLoginPasswordHandler())
 	//r.POST("/api/data/add-card", middleware.JWTAuth(), h.AddCreditCardHandler())
 	//r.POST("/api/data/get-card", middleware.JWTAuth(), h.GetCreditCardHandler())
 }

@@ -7,7 +7,7 @@ import (
 )
 
 type BinaryDataRepo interface {
-	GetBinaryData(userID string) (*models.BinaryData, error)
+	GetBinaryData(userID string) ([]*models.BinaryData, error)
 	SaveNewBinaryData(*models.BinaryData) error
 }
 
@@ -19,12 +19,12 @@ func NewBDRepo(db *gorm.DB) *BDRepo {
 	return &BDRepo{db: db}
 }
 
-func (bd *BDRepo) GetBinaryData(userID string) (*models.BinaryData, error) {
-	var binaryData models.BinaryData
-	if err := bd.db.Where("user_id = ?", userID).First(&binaryData).Error; err != nil {
+func (bd *BDRepo) GetBinaryData(userID string) ([]*models.BinaryData, error) {
+	var binaryData []*models.BinaryData
+	if err := bd.db.Where("user_id = ?", userID).Find(&binaryData).Error; err != nil {
 		return nil, fmt.Errorf("failed to get binary data by username %s: %w", userID, err)
 	}
-	return &binaryData, nil
+	return binaryData, nil
 }
 
 func (bd *BDRepo) SaveNewBinaryData(binaryData *models.BinaryData) error {

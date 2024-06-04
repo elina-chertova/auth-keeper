@@ -7,7 +7,7 @@ import (
 )
 
 type LoginPasswordRepo interface {
-	GetLoginPasswordData(userID string) (*models.LoginPassword, error)
+	GetLoginPasswordData(userID string) ([]*models.LoginPassword, error)
 	SaveNewLoginPassword(*models.LoginPassword) error
 }
 
@@ -19,12 +19,12 @@ func NewLPRepo(db *gorm.DB) *LPRepo {
 	return &LPRepo{db: db}
 }
 
-func (lp *LPRepo) GetLoginPasswordData(userID string) (*models.LoginPassword, error) {
-	var loginPassword models.LoginPassword
-	if err := lp.db.Where("user_id = ?", userID).First(&loginPassword).Error; err != nil {
+func (lp *LPRepo) GetLoginPasswordData(userID string) ([]*models.LoginPassword, error) {
+	var loginPassword []*models.LoginPassword
+	if err := lp.db.Where("user_id = ?", userID).Find(&loginPassword).Error; err != nil {
 		return nil, fmt.Errorf("failed to get login-password list by username %s: %w", userID, err)
 	}
-	return &loginPassword, nil
+	return loginPassword, nil
 }
 
 func (lp *LPRepo) SaveNewLoginPassword(logPass *models.LoginPassword) error {

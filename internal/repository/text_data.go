@@ -7,7 +7,7 @@ import (
 )
 
 type TextDataRepo interface {
-	GetTextData(userID string) (*models.TextData, error)
+	GetTextData(userID string) ([]*models.TextData, error)
 	SaveNewTextData(*models.TextData) error
 }
 
@@ -19,12 +19,12 @@ func NewTDRepo(db *gorm.DB) *TDRepo {
 	return &TDRepo{db: db}
 }
 
-func (td *TDRepo) GetTextData(userID string) (*models.TextData, error) {
-	var textData models.TextData
-	if err := td.db.Where("user_id = ?", userID).First(&textData).Error; err != nil {
+func (td *TDRepo) GetTextData(userID string) ([]*models.TextData, error) {
+	var textData []*models.TextData
+	if err := td.db.Where("user_id = ?", userID).Find(&textData).Error; err != nil {
 		return nil, fmt.Errorf("failed to get text data by username %s: %w", userID, err)
 	}
-	return &textData, nil
+	return textData, nil
 }
 
 func (td *TDRepo) SaveNewTextData(textData *models.TextData) error {
