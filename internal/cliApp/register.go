@@ -45,7 +45,7 @@ func registerUser(baseURL string) func(c *cli.Context) error {
 		}
 
 		client := sender.NewClient(baseURL)
-		resp, err := client.SendRequest("POST", "register", user)
+		resp, err := client.SendRequest("POST", "register", user, "")
 		if err != nil {
 			log.Fatalf("Error registering user: %v", err)
 		}

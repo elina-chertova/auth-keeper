@@ -45,7 +45,8 @@ func loginUser(baseURL string) func(c *cli.Context) error {
 		}
 
 		client := sender.NewClient(baseURL)
-		resp, err := client.SendRequest("POST", "login", user)
+		resp, err := client.SendRequest("POST", "login", user, "")
+
 		if err != nil {
 			log.Fatalf("Error signing up user: %v", err)
 		}

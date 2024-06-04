@@ -14,6 +14,7 @@ type response struct {
 
 func JWTAuth() gin.HandlerFunc {
 	return func(c *gin.Context) {
+
 		accessTokenBearer := c.GetHeader("Authorization")
 		if accessTokenBearer != "" {
 			token := strings.TrimPrefix(accessTokenBearer, "Bearer ")
@@ -47,6 +48,19 @@ func JWTAuth() gin.HandlerFunc {
 		}
 
 		accessTokenCookie, err := c.Cookie("access_token")
+		if err != nil {
+			c.JSON(
+				http.StatusUnauthorized,
+				response{
+					Message: err.Error(),
+					Status:  "Unauthorized",
+				},
+			)
+			c.Abort()
+			return
+		}
+
+		err = security.ValidateToken(accessTokenCookie)
 		if err != nil {
 			c.JSON(
 				http.StatusUnauthorized,

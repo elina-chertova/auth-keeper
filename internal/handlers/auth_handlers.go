@@ -8,7 +8,6 @@ import (
 	"github.com/gin-gonic/gin"
 	"log"
 	"net/http"
-	"time"
 )
 
 type UserHandler struct {
@@ -51,21 +50,15 @@ func (h *UserHandler) Register() gin.HandlerFunc {
 			ctx.JSON(http.StatusInternalServerError, gin.H{"error": errTokenGenerated})
 			return
 		}
-		expirationTime := time.Now().Add(72 * time.Hour)
-		cookie := http.Cookie{
-			Name:     "access_token",
-			Value:    token,
-			Expires:  expirationTime,
-			HttpOnly: true,
-			Secure:   true,
-		}
-		http.SetCookie(ctx.Writer, &cookie)
+
+		ctx.SetCookie("access_token", token, 3600, "/", "localhost", false, true)
 		ctx.Writer.Header().Set("Authorization", "Bearer "+token)
 
 		user.Password = "***"
 		ctx.IndentedJSON(
 			http.StatusCreated, gin.H{
 				"message": "User has been created",
+				"token":   token,
 				"user":    user,
 			},
 		)
@@ -100,20 +93,13 @@ func (h *UserHandler) Signup() gin.HandlerFunc {
 			return
 		}
 
-		expirationTime := time.Now().Add(72 * time.Hour)
-		cookie := http.Cookie{
-			Name:     "access_token",
-			Value:    token,
-			Expires:  expirationTime,
-			HttpOnly: true,
-			Secure:   true,
-		}
-		http.SetCookie(ctx.Writer, &cookie)
+		ctx.SetCookie("access_token", token, 3600, "/", "localhost", false, true)
 		ctx.Writer.Header().Set("Authorization", "Bearer "+token)
 
 		ctx.IndentedJSON(
 			http.StatusOK, gin.H{
-				"message": "User has been created",
+				"message": "User has logged in",
+				"token":   token,
 				"status":  http.StatusOK,
 			},
 		)

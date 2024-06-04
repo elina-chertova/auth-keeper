@@ -1,13 +1,10 @@
 package security
 
 import (
+	"errors"
 	"github.com/elina-chertova/auth-keeper.git/internal/config"
 	"github.com/golang-jwt/jwt/v4"
 	"time"
-)
-
-import (
-	"errors"
 )
 
 const TokenExp = time.Minute * 10
