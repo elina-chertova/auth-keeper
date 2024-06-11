@@ -9,7 +9,6 @@ import (
 type UserRepo interface {
 	CreateUser(user *models.User) error
 	GetUserByUsername(username string) (*models.User, error)
-	//DeleteUser()
 }
 
 type userRepo struct {

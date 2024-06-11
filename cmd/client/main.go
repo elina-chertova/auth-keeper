@@ -11,6 +11,7 @@ import (
 func main() {
 	name := "PasswordKeeper"
 	baseURL := "http://localhost:8081"
+
 	baseURLAuth := fmt.Sprintf("%s%s", baseURL, "/api/user/")
 	baseURLData := fmt.Sprintf("%s%s", baseURL, "/api/data/")
 	app := &cli.App{

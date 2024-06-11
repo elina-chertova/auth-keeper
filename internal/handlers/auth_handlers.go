@@ -55,6 +55,7 @@ func (h *UserHandler) Register() gin.HandlerFunc {
 		ctx.Writer.Header().Set("Authorization", "Bearer "+token)
 
 		user.Password = "***"
+		user.PersonalKey = []byte("***")
 		ctx.IndentedJSON(
 			http.StatusCreated, gin.H{
 				"message": "User has been created",

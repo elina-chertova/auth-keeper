@@ -45,6 +45,11 @@ func ValidateToken(signedToken string) error {
 		},
 	)
 	if err != nil {
+		if ve, ok := err.(*jwt.ValidationError); ok {
+			if ve.Errors&jwt.ValidationErrorExpired != 0 {
+				return ErrorTokenExpired
+			}
+		}
 		return err
 	}
 	claims, ok := token.Claims.(*JWTClaims)
@@ -68,7 +73,7 @@ func GetUserFromToken(signedToken string) (string, error) {
 		return "", err
 	}
 	claims, ok := token.Claims.(*JWTClaims)
-	if !ok {
+	if !ok || !token.Valid {
 		return "", ErrorParseClaims
 	}
 	return claims.UserID, nil

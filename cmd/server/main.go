@@ -45,18 +45,22 @@ func dataRoutes(r *gin.Engine, db *gorm.DB) {
 	td := repository.NewTDRepo(db)
 
 	h := handlers.NewDataHandler(lp, bd, cc, td)
-	authorized := r.Group("/", middleware.JWTAuth())
-	authorized.POST("/api/data/add-card", h.AddCreditCardHandler())
-	authorized.GET("/api/data/get-card", h.GetCreditCardHandler())
+	r.Use(middleware.JWTAuth())
+	r.Use(middleware.ExtractUserID())
+	userRepo := repository.NewUserRepo(db)
 
-	authorized.POST("/api/data/add-text-data", h.AddTextDataHandler())
-	authorized.GET("/api/data/get-text-data", h.GetTextDataHandler())
+	r.Use(middleware.LoadPersonalKey(userRepo))
 
-	authorized.POST("/api/data/add-binary-data", h.AddBinaryDataHandler())
-	authorized.GET("/api/data/get-binary-data", h.GetBinaryDataHandler())
+	r.POST("/api/data/add-card", h.AddCreditCardHandler())
+	r.GET("/api/data/get-card", h.GetCreditCardHandler())
 
-	authorized.POST("/api/data/add-login-password", h.AddLoginPasswordHandler())
-	authorized.GET("/api/data/get-login-password", h.GetLoginPasswordHandler())
-	//r.POST("/api/data/add-card", middleware.JWTAuth(), h.AddCreditCardHandler())
-	//r.POST("/api/data/get-card", middleware.JWTAuth(), h.GetCreditCardHandler())
+	r.POST("/api/data/add-text-data", h.AddTextDataHandler())
+	r.GET("/api/data/get-text-data", h.GetTextDataHandler())
+
+	r.POST("/api/data/add-binary-data", h.AddBinaryDataHandler())
+	r.GET("/api/data/get-binary-data", h.GetBinaryDataHandler())
+
+	r.POST("/api/data/add-login-password", h.AddLoginPasswordHandler())
+	r.GET("/api/data/get-login-password", h.GetLoginPasswordHandler())
+
 }

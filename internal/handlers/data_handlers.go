@@ -1,6 +1,8 @@
 package handlers
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"github.com/elina-chertova/auth-keeper.git/internal/db/models"
@@ -51,23 +53,46 @@ func extractUserFromRequest(ctx *gin.Context) (string, error) {
 
 func (dh *DataHandler) AddCreditCardHandler() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		userID, err := extractUserFromRequest(ctx)
+		userID, exists := ctx.Get("userID")
+		if !exists {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
+
+		var encryptedData struct {
+			Data string `json:"data"`
+		}
+		if err := ctx.ShouldBindJSON(&encryptedData); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		decodedData, err := base64.StdEncoding.DecodeString(encryptedData.Data)
 		if err != nil {
-			if errors.Is(err, errTokenNotFound) {
-				ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-			} else {
-				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			}
-			log.Printf("Error extracting user from token: %v", err)
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Failed to decode base64 data"})
+			return
+		}
+		personalKey, exists := ctx.Get("personalKey")
+		if !exists {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Personal key not found"})
+			return
+		}
+
+		decryptedData, err := security.DecryptData(decodedData, personalKey.([]byte))
+		if err != nil {
+			log.Printf("Failed to decrypt data: %v", err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decrypt data"})
 			return
 		}
 
 		var creditCard models.CreditCard
-		if err := ctx.ShouldBindJSON(&creditCard); err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		if err := json.Unmarshal(decryptedData, &creditCard); err != nil {
+			log.Printf("Failed to unmarshal decrypted data: %v", err)
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Failed to unmarshal decrypted data"})
 			return
 		}
-		creditCard.UserID = userID
+
+		creditCard.UserID = userID.(string)
 		err = dh.cc.SaveNewCreditCard(&creditCard)
 		if err != nil {
 			log.Printf("Error adding credit card: %v", err)
@@ -103,35 +128,81 @@ func (dh *DataHandler) GetCreditCardHandler() gin.HandlerFunc {
 			return
 		}
 
+		creditCardsJSON, err := json.Marshal(creditCard)
+		if err != nil {
+			ctx.JSON(
+				http.StatusInternalServerError,
+				gin.H{"error": "Failed to marshal credit cards"},
+			)
+			return
+		}
+
+		personalKey, exists := ctx.Get("personalKey")
+		if !exists {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Personal key not found"})
+			return
+		}
+
+		encryptedData, err := security.EncryptData(creditCardsJSON, personalKey.([]byte))
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to encrypt data"})
+			return
+		}
+
+		encodedData := base64.StdEncoding.EncodeToString(encryptedData)
+
 		ctx.IndentedJSON(
 			http.StatusOK, gin.H{
 				"message": "Credit card list",
-				"body":    creditCard,
+				"body":    encodedData,
 			},
 		)
-
 	}
 }
 
 func (dh *DataHandler) AddBinaryDataHandler() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		userID, err := extractUserFromRequest(ctx)
+		userID, exists := ctx.Get("userID")
+		if !exists {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
+
+		var encryptedData struct {
+			Data string `json:"data"`
+		}
+		if err := ctx.ShouldBindJSON(&encryptedData); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		decodedData, err := base64.StdEncoding.DecodeString(encryptedData.Data)
 		if err != nil {
-			if errors.Is(err, errTokenNotFound) {
-				ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-			} else {
-				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			}
-			log.Printf("Error extracting user from token: %v", err)
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Failed to decode base64 data"})
+			return
+		}
+
+		personalKey, exists := ctx.Get("personalKey")
+		if !exists {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Personal key not found"})
+			return
+		}
+
+		decryptedData, err := security.DecryptData(decodedData, personalKey.([]byte))
+		if err != nil {
+			log.Printf("Failed to decrypt data: %v", err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decrypt data"})
 			return
 		}
 
 		var binaryData models.BinaryData
-		if err := ctx.ShouldBindJSON(&binaryData); err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		if err := json.Unmarshal(decryptedData, &binaryData); err != nil {
+			log.Printf("Failed to unmarshal decrypted data: %v", err)
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Failed to unmarshal decrypted data"})
 			return
 		}
-		binaryData.UserID = userID
+
+		binaryData.UserID = userID.(string)
 		err = dh.bd.SaveNewBinaryData(&binaryData)
 		if err != nil {
 			log.Printf("Error adding binary data: %v", err)
@@ -168,10 +239,33 @@ func (dh *DataHandler) GetBinaryDataHandler() gin.HandlerFunc {
 			return
 		}
 
+		binaryDataJSON, err := json.Marshal(binaryData)
+		if err != nil {
+			ctx.JSON(
+				http.StatusInternalServerError,
+				gin.H{"error": "Failed to marshal binary data"},
+			)
+			return
+		}
+
+		personalKey, exists := ctx.Get("personalKey")
+		if !exists {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Personal key not found"})
+			return
+		}
+
+		encryptedData, err := security.EncryptData(binaryDataJSON, personalKey.([]byte))
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to encrypt data"})
+			return
+		}
+
+		encodedData := base64.StdEncoding.EncodeToString(encryptedData)
+
 		ctx.IndentedJSON(
 			http.StatusOK, gin.H{
 				"message": "Binary data list",
-				"body":    binaryData,
+				"body":    encodedData,
 			},
 		)
 	}
@@ -179,23 +273,47 @@ func (dh *DataHandler) GetBinaryDataHandler() gin.HandlerFunc {
 
 func (dh *DataHandler) AddTextDataHandler() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		userID, err := extractUserFromRequest(ctx)
+		userID, exists := ctx.Get("userID")
+		if !exists {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
+
+		var encryptedData struct {
+			Data string `json:"data"`
+		}
+		if err := ctx.ShouldBindJSON(&encryptedData); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		decodedData, err := base64.StdEncoding.DecodeString(encryptedData.Data)
 		if err != nil {
-			if errors.Is(err, errTokenNotFound) {
-				ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-			} else {
-				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			}
-			log.Printf("Error extracting user from token: %v", err)
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Failed to decode base64 data"})
+			return
+		}
+
+		personalKey, exists := ctx.Get("personalKey")
+		if !exists {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Personal key not found"})
+			return
+		}
+
+		decryptedData, err := security.DecryptData(decodedData, personalKey.([]byte))
+		if err != nil {
+			log.Printf("Failed to decrypt data: %v", err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decrypt data"})
 			return
 		}
 
 		var textData models.TextData
-		if err := ctx.ShouldBindJSON(&textData); err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		if err := json.Unmarshal(decryptedData, &textData); err != nil {
+			log.Printf("Failed to unmarshal decrypted data: %v", err)
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Failed to unmarshal decrypted data"})
 			return
 		}
-		textData.UserID = userID
+
+		textData.UserID = userID.(string)
 		err = dh.td.SaveNewTextData(&textData)
 		if err != nil {
 			log.Printf("Error adding text data: %v", err)
@@ -232,10 +350,33 @@ func (dh *DataHandler) GetTextDataHandler() gin.HandlerFunc {
 			return
 		}
 
+		textDataJSON, err := json.Marshal(textData)
+		if err != nil {
+			ctx.JSON(
+				http.StatusInternalServerError,
+				gin.H{"error": "Failed to marshal text data"},
+			)
+			return
+		}
+
+		personalKey, exists := ctx.Get("personalKey")
+		if !exists {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Personal key not found"})
+			return
+		}
+
+		encryptedData, err := security.EncryptData(textDataJSON, personalKey.([]byte))
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to encrypt data"})
+			return
+		}
+
+		encodedData := base64.StdEncoding.EncodeToString(encryptedData)
+
 		ctx.IndentedJSON(
 			http.StatusOK, gin.H{
 				"message": "Text data list",
-				"body":    textData,
+				"body":    encodedData,
 			},
 		)
 	}
@@ -243,23 +384,55 @@ func (dh *DataHandler) GetTextDataHandler() gin.HandlerFunc {
 
 func (dh *DataHandler) AddLoginPasswordHandler() gin.HandlerFunc {
 	return func(ctx *gin.Context) {
-		userID, err := extractUserFromRequest(ctx)
+		userID, exists := ctx.Get("userID")
+		if !exists {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
+			return
+		}
+
+		var encryptedData struct {
+			Data string `json:"data"`
+		}
+		if err := ctx.ShouldBindJSON(&encryptedData); err != nil {
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+
+		decodedData, err := base64.StdEncoding.DecodeString(encryptedData.Data)
 		if err != nil {
-			if errors.Is(err, errTokenNotFound) {
-				ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Unauthorized"})
-			} else {
-				ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			}
-			log.Printf("Error extracting user from token: %v", err)
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Failed to decode base64 data"})
+			return
+		}
+
+		personalKey, exists := ctx.Get("personalKey")
+		if !exists {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Personal key not found"})
+			return
+		}
+
+		decryptedData, err := security.DecryptData(decodedData, personalKey.([]byte))
+		if err != nil {
+			log.Printf("Failed to decrypt data: %v", err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to decrypt data"})
 			return
 		}
 
 		var loginPassword models.LoginPassword
-		if err := ctx.ShouldBindJSON(&loginPassword); err != nil {
-			ctx.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		if err := json.Unmarshal(decryptedData, &loginPassword); err != nil {
+			log.Printf("Failed to unmarshal decrypted data: %v", err)
+			ctx.JSON(http.StatusBadRequest, gin.H{"error": "Failed to unmarshal decrypted data"})
 			return
 		}
-		loginPassword.UserID = userID
+
+		hashed, err := security.HashPassword(loginPassword.Password)
+		if err != nil {
+			log.Printf("Error hashing password: %v", err)
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
+
+		loginPassword.Password = hashed
+		loginPassword.UserID = userID.(string)
 		err = dh.lp.SaveNewLoginPassword(&loginPassword)
 		if err != nil {
 			log.Printf("Error adding new login and password: %v", err)
@@ -296,10 +469,33 @@ func (dh *DataHandler) GetLoginPasswordHandler() gin.HandlerFunc {
 			return
 		}
 
+		lpDataJSON, err := json.Marshal(lpData)
+		if err != nil {
+			ctx.JSON(
+				http.StatusInternalServerError,
+				gin.H{"error": "Failed to marshal login-password data"},
+			)
+			return
+		}
+
+		personalKey, exists := ctx.Get("personalKey")
+		if !exists {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Personal key not found"})
+			return
+		}
+
+		encryptedData, err := security.EncryptData(lpDataJSON, personalKey.([]byte))
+		if err != nil {
+			ctx.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to encrypt data"})
+			return
+		}
+
+		encodedData := base64.StdEncoding.EncodeToString(encryptedData)
+
 		ctx.IndentedJSON(
 			http.StatusOK, gin.H{
 				"message": "Login-Password data list",
-				"body":    lpData,
+				"body":    encodedData,
 			},
 		)
 	}

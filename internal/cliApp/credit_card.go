@@ -1,13 +1,16 @@
 package cliApp
 
 import (
+	"encoding/base64"
+	"encoding/json"
 	"fmt"
-	"log"
-	"net/http"
-
 	"github.com/elina-chertova/auth-keeper.git/internal/db/models"
+	"github.com/elina-chertova/auth-keeper.git/internal/security"
 	"github.com/elina-chertova/auth-keeper.git/internal/sender"
 	"github.com/urfave/cli/v2"
+	"log"
+	"net/http"
+	"os"
 )
 
 func getAddCardFlags() []cli.Flag {
@@ -63,7 +66,33 @@ func AddCard(baseURL string) func(c *cli.Context) error {
 		token := c.String("token")
 		client := sender.NewClient(baseURL)
 
-		resp, err := client.SendRequest("POST", "add-card", creditCard, token)
+		jsonData, err := json.Marshal(creditCard)
+		if err != nil {
+			log.Fatalf("Error marshalling data: %v", err)
+		}
+
+		personalKey, err := os.ReadFile("pkey.txt")
+		if err != nil {
+			log.Fatalf("Error reading personal key: %v", err)
+		}
+
+		encryptedData, err := security.EncryptData(jsonData, personalKey)
+		if err != nil {
+			log.Fatalf("Error encrypting data: %v", err)
+		}
+
+		encodedData := base64.StdEncoding.EncodeToString(encryptedData)
+		fmt.Printf("Encrypted Data: %s\n", encodedData)
+
+		resp, err := client.SendRequest(
+			"POST",
+			"add-card",
+			map[string]string{"data": encodedData},
+			token,
+		)
+		if err != nil {
+			log.Fatalf("Error adding credit card: %v", err)
+		}
 		if err != nil {
 			log.Fatalf("Error adding credit card: %v", err)
 		}
@@ -80,6 +109,7 @@ func AddCard(baseURL string) func(c *cli.Context) error {
 		return nil
 	}
 }
+
 func AddCardCommand(baseURL string) *cli.Command {
 	return &cli.Command{
 		Name:   "add-card",
@@ -117,10 +147,38 @@ func GetCard(baseURL string) func(c *cli.Context) error {
 			)
 		}
 
-		fmt.Printf("Credit Card got successfully: %s\n", resp.String())
+		var responseData struct {
+			Body    string `json:"body"`
+			Message string `json:"message"`
+		}
+
+		if err := json.Unmarshal(resp.Bytes(), &responseData); err != nil {
+			log.Fatalf("Error unmarshalling response data: %v", err)
+		}
+
+		encodedData := responseData.Body
+		fmt.Printf("Encoded Data: %s\n", encodedData)
+
+		personalKey, err := os.ReadFile("pkey.txt")
+		if err != nil {
+			log.Fatalf("Error reading personal key: %v", err)
+		}
+
+		decodedData, err := base64.StdEncoding.DecodeString(encodedData)
+		if err != nil {
+			log.Fatalf("Error decoding base64 data: %v", err)
+		}
+
+		decryptedData, err := security.DecryptData(decodedData, personalKey)
+		if err != nil {
+			log.Fatalf("Error decrypting data: %v", err)
+		}
+
+		fmt.Printf("Decrypted Data: %s\n", string(decryptedData))
 		return nil
 	}
 }
+
 func GetCardCommand(baseURL string) *cli.Command {
 	return &cli.Command{
 		Name:   "get-card",

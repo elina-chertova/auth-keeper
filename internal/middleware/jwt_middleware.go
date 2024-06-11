@@ -1,8 +1,10 @@
 package middleware
 
 import (
+	"fmt"
 	"github.com/elina-chertova/auth-keeper.git/internal/security"
 	"github.com/gin-gonic/gin"
+	"log"
 	"net/http"
 	"strings"
 )
@@ -75,5 +77,28 @@ func JWTAuth() gin.HandlerFunc {
 
 		c.Set("token", accessTokenCookie)
 		c.Next()
+	}
+}
+
+func ExtractUserID() gin.HandlerFunc {
+	return func(ctx *gin.Context) {
+		token, exists := ctx.Get("token")
+		if !exists {
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Token not found"})
+			ctx.Abort()
+			return
+		}
+
+		tokenStr := fmt.Sprintf("%v", token)
+		userID, err := security.GetUserFromToken(tokenStr)
+		if err != nil {
+			log.Printf("Error extracting user from token: %v", err)
+			ctx.JSON(http.StatusUnauthorized, gin.H{"error": "Invalid token"})
+			ctx.Abort()
+			return
+		}
+
+		ctx.Set("userID", userID)
+		ctx.Next()
 	}
 }
