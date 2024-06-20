@@ -4,6 +4,19 @@ go test ./...
 ```
 
 ## Запуск сервера
+Необходимо создать .env файл (аналогично .env.example) в корне проекта.
+Пример:
+```shell
+DB_HOST=localhost
+DB_PORT=5432
+DB_USER=user
+DB_NAME=db
+DB_PASSWORD=password
+
+APP_ADDRESS=localhost:8080
+SECRET_KEY=key
+```
+
 ```shell
 go build cmd/server/main.go
 go run cmd/server/main.go
