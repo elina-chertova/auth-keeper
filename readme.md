@@ -3,6 +3,12 @@
 go test ./...
 ```
 
+## Запуск сервера
+```shell
+go build cmd/server/main.go
+go run cmd/server/main.go
+```
+
 # Usage
 ## Registration
 ```shell
